@@ -94,7 +94,7 @@ class CFClient
     protected function authenticate($item)
     {
         try {
-            $request = new AuthenticationRequest(array("api_key" => $this->_sdkKey));
+            $request = new AuthenticationRequest(["api_key" => $this->_sdkKey]);
             $response = $this->_apiInstance->authenticate($request);
             $jwtToken = $response->getAuthToken();
             $parts = explode('.', $jwtToken);
@@ -108,6 +108,10 @@ class CFClient
             $this->_cluster = "1";
             if (array_key_exists('clusterIdentifier', $payload)) {
                 $this->_cluster = $payload->clusterIdentifier;
+            }
+            if (!isset($this->_environment)) {
+                $this->_logger->error("environment UUID not found in JWT claims");
+                return;
             }
             $this->_configuration->setAccessToken($jwtToken);
             $this->_logger->info("successfully authenticated");
@@ -130,7 +134,7 @@ class CFClient
     }
 
     public function evaluate(string $identifier, Target $target, $defaultValue) {
-        $item = $this->_cache->getItem("evaluations__$identifier");
+        $item = $this->_cache->getItem("evaluations__{$identifier}__{$target->getIdentifier()}");
         if ($value = $item->get()) {
             $this->_logger->debug("Loading {$identifier} from cache with value {$value}");
             return $value;

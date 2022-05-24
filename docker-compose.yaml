@@ -7,9 +7,8 @@ services:
     restart: unless-stopped
     tty: true
     working_dir: /var/www
-    environment:
-      - PROXY_BASE_URL=http://ff-proxy:7000
-      - PROXY_EVENTS_URL=http://ff-proxy:7000
+    env_file:
+      - .php.env
     ports:
       - "9000:9000"
     volumes:
@@ -19,9 +18,12 @@ services:
       - app-network
   composer:
     image: composer
+    container_name: composer
     volumes:
       - ./:/app/
     command: update && install
+    networks:
+      - app-network
 
   webserver:
     image: nginx:alpine
@@ -37,17 +39,36 @@ services:
       - app-network
 
   ff-proxy:
-    image: "harness/ff-proxy:latest"
+    image: "harness/ff-proxy:0.9.3"
     container_name: ff-proxy
     volumes:
       - ./config:/config
     environment:
-      - DEBUG=false
-      - OFFLINE=true
-      - BYPASS_AUTH=false
-      - AUTH_SECRET=foobar
+      - DEBUG=${DEBUG}
+      - OFFLINE=${OFFLINE}
+      - BYPASS_AUTH=${BYPASS_AUTH}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - ACCOUNT_IDENTIFIER=${ACCOUNT_IDENTIFIER}
+      - ORG_IDENTIFIER=${ORG_IDENTIFIER}
+      - ADMIN_SERVICE=${ADMIN_SERVICE}
+      - ADMIN_SERVICE_TOKEN=${ADMIN_SERVICE_TOKEN}
+      - CLIENT_SERVICE=${CLIENT_SERVICE_TOKEN}
+      - SDK_BASE_URL=${SDK_BASE_URL}
+      - SDK_EVENTS_URL=${SDK_EVENTS_URL}
+      - REDIS_ADDRESS=${REDIS_ADDRESS}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+      - API_KEYS=${API_KEYS}
+      - TARGET_POLL_DURATION=${TARGET_POLL_DURATION}
     ports:
       - "7001:7000"
+    networks:
+      - app-network
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    ports:
+      - "6379:6379"
     networks:
       - app-network
 networks:
