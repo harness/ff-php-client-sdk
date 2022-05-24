@@ -34,6 +34,10 @@
     ],
     "require": {
         "php": ">=7.4",
-        "harness/ff-php-client-api": "*@dev"
+        "harness/ff-php-client-api": "*@dev",
+        "cache/filesystem-adapter": "^1.2",
+        "monolog/monolog": "2.6.0",
+        "psr/log": "1.1.4",
+        "psr/cache": "1.0.1"
     }
 }
