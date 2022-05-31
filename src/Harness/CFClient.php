@@ -104,7 +104,8 @@ class CFClient
             }
             $decoded = base64_decode($parts[1]);
             $payload = json_decode($decoded, true);
-            $this->_environment = $payload->environment;
+            $this->_environment = $payload['environment'];
+            $this->_cluster = "1";
             if (array_key_exists('clusterIdentifier', $payload)) {
                 $this->_cluster = $payload->clusterIdentifier;
             }
