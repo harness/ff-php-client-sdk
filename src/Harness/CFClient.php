@@ -98,7 +98,7 @@ class CFClient
             $response = $this->_apiInstance->authenticate($request);
             $jwtToken = $response->getAuthToken();
             $parts = explode('.', $jwtToken);
-            if (count($parts) != 3) {
+            if (count($parts) !== 3) {
                 $this->_logger->error("JWT token not valid!");
                 return;
             }
@@ -130,18 +130,17 @@ class CFClient
     }
 
     public function evaluate(string $identifier, Target $target, $defaultValue) {
-        $key = "evaluations__". $identifier;
-        $item = $this->_cache->getItem($key);
-        if ($item) {
-            $this->_logger->debug("Loading $identifier from cache");
-            return $item->get();
+        $item = $this->_cache->getItem("evaluations__$identifier");
+        if ($value = $item->get()) {
+            $this->_logger->debug("Loading {$identifier} from cache with value {$value}");
+            return $value;
         }
         try {
             $response = $this->_apiInstance->getEvaluationByIdentifier($this->_environment, $identifier, $target->getIdentifier());
             $item->set($response["value"]);
             $item->expiresAfter(60);
             $this->_cache->save($item);
-            $this->_logger->debug("Put $identifier in the cache");
+            $this->_logger->debug("Put {$identifier} in the cache");
             return $response["value"];
         } catch (ApiException $e) {
             $this->_logger->error("Caught $e");
