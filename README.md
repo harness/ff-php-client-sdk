@@ -6,6 +6,7 @@ Harness Feature Flag PHP SDK
 **[Requirements](#Requirements)**<br>
 **[Quickstart](#Quickstart)**<br>
 **[Further Reading](docs/further_reading.md)**<br>
+**[Development](docs/development.md)**<br>
 
 
 ## Intro
