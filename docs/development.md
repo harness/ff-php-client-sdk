@@ -15,8 +15,6 @@ make start-offline
 when you don't need development environment just type:
 ```shell
 make stop
-<<<<<<< HEAD
-```
 
 ## OpenAPI generator instructions
 
@@ -46,6 +44,3 @@ cd api
 ```shell
 docker-compose run --rm composer composer require symfony/package:version
 ```
-=======
-```
->>>>>>> 97474ad (readme updated)
