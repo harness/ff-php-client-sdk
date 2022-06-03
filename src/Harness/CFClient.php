@@ -38,9 +38,12 @@ class CFClient
     protected $_logger;
     protected $_cache;
 
-    public function __construct(string $sdkKey, array $options = [])
+    protected Target $_target;
+
+    public function __construct(string $sdkKey, Target $target, array $options = [])
     {
         $this->_sdkKey = $sdkKey;
+        $this->_target = $target;
         if (!isset($options['base_url'])) {
             $this->_baseUrl = $_ENV["PROXY_BASE_URL"] ?: self::DEFAULT_BASE_URL;
         } else {
@@ -74,7 +77,7 @@ class CFClient
         $this->_configuration->setHost($this->_baseUrl);
         $this->_apiInstance = new ClientApi(new Client(), $this->_configuration);
 
-        $item = $this->_cache->getItem("cf_data");
+        $item = $this->_cache->getItem("cf_data__{$target->getIdentifier()}");
         $cfData = $item->get();
         if (isset($cfData)) {
             $this->_logger->info("CF data loaded from the cache");
@@ -126,21 +129,22 @@ class CFClient
 
     public function fetchEvaluations()
     {
-        // TBD
-        $response = $this->_apiInstance->getFeatureConfig($this->_environment);
-        foreach ($response as $key => $value) {
-            echo "Key: $key; Value: $value\n";
+        try {
+            $result = $this->_apiInstance->getEvaluations($this->_environment, $this->_target->getIdentifier(), $this->_cluster);
+            print_r($result);
+        } catch (Exception $e) {
+            echo 'Exception when calling ClientApi->getEvaluations: ', $e->getMessage(), PHP_EOL;
         }
     }
 
-    public function evaluate(string $identifier, Target $target, $defaultValue) {
-        $item = $this->_cache->getItem("evaluations__{$identifier}__{$target->getIdentifier()}");
+    public function evaluate(string $identifier, $defaultValue) {
+        $item = $this->_cache->getItem("evaluations__{$identifier}__{$this->_target->getIdentifier()}");
         if ($value = $item->get()) {
             $this->_logger->debug("Loading {$identifier} from cache with value {$value}");
             return $value;
         }
         try {
-            $response = $this->_apiInstance->getEvaluationByIdentifier($this->_environment, $identifier, $target->getIdentifier());
+            $response = $this->_apiInstance->getEvaluationByIdentifier($this->_environment, $identifier, $this->_target->getIdentifier(), $this->_cluster);
             $item->set($response["value"]);
             $item->expiresAfter(60);
             $this->_cache->save($item);

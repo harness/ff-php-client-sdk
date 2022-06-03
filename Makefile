@@ -8,7 +8,7 @@ stop:
 	docker-compose -f docker-compose.yaml down --remove-orphans
 
 generate:
-	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate \
+	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli:v6.0.0 generate \
 	--git-host github.com \
 	--git-user-id harness \
 	--git-repo-id ff-php-client-api \
