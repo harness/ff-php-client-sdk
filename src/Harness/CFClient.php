@@ -16,6 +16,7 @@ use Psr\Log\LogLevel;
 use League\Flysystem\Adapter\Local;
 use League\Flysystem\Filesystem;
 use Cache\Adapter\Filesystem\FilesystemCachePool;
+use OpenAPI\Client\Model\Evaluation;
 
 class CFClient
 {
@@ -131,9 +132,16 @@ class CFClient
     {
         try {
             $result = $this->_apiInstance->getEvaluations($this->_environment, $this->_target->getIdentifier(), $this->_cluster);
-            print_r($result);
+            foreach ($result as $evaluation) {
+                $item = $this->_cache->getItem("evaluations__{$evaluation->getIdentifier()}__{$this->_target->getIdentifier()}");
+                $item->set($this->convertValue($evaluation));
+                $item->expiresAfter(60);
+                $this->_cache->save($item);
+            }
+        } catch (ApiException $e) {
+            $this->_logger->error('Exception when calling ClientApi->getEvaluations: {$e->getMessage()}');
         } catch (Exception $e) {
-            echo 'Exception when calling ClientApi->getEvaluations: ', $e->getMessage(), PHP_EOL;
+            $this->_logger->error("Caught $e");
         }
     }
 
@@ -145,14 +153,38 @@ class CFClient
         }
         try {
             $response = $this->_apiInstance->getEvaluationByIdentifier($this->_environment, $identifier, $this->_target->getIdentifier(), $this->_cluster);
-            $item->set($response["value"]);
+            $value = $this->convertValue($response);
+            $item->set($value);
             $item->expiresAfter(60);
             $this->_cache->save($item);
             $this->_logger->debug("Put {$identifier} in the cache");
-            return $response["value"];
+            return $value;
         } catch (ApiException $e) {
             $this->_logger->error("Caught $e");
             return $defaultValue;
         }
+    }
+
+    protected function convertValue(Evaluation $evaluation) {
+        $value = $evaluation->getValue();
+        try {
+            switch ($evaluation->getKind()) {
+                case "int":
+                    $value = (int)$value;
+                case "number":
+                    $value = (float)$value;
+                    break;
+                case "boolean":
+                    $value === "true";
+                    break;
+                case "json":
+                    $value = json_decode($value, true);
+                    break;
+            }
+        } catch (Exception $e) {
+            $this->_logger->error("Caught $e");
+        }
+
+        return $value;
     }
 }
