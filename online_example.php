@@ -7,4 +7,6 @@ use OpenAPI\Client\Model\Target;
 
 $cfClient = new CFClient(getenv("SDK_KEY"), new Target(["name" => "enver", "identifier" => "enver"]));
 
-echo "Evaluation value " . $cfClient->evaluate("flag1", false);
+echo "Evaluation value for flag 'flag1' with target 'enver': " . $cfClient->evaluate("flag1", false);
+
+$cfClient->sendMetrics();

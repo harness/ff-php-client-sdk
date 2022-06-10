@@ -12,11 +12,20 @@ use OpenAPI\Client\ApiException;
 use OpenAPI\Client\Model\Target;
 use GuzzleHttp\Client;
 use Psr\Log\LogLevel;
+use GuzzleHttp\HandlerStack;
+use GuzzleLogMiddleware\LogMiddleware;
 
 use League\Flysystem\Adapter\Local;
 use League\Flysystem\Filesystem;
 use Cache\Adapter\Filesystem\FilesystemCachePool;
+use OpenAPI\Client\Api\MetricsApi;
 use OpenAPI\Client\Model\Evaluation;
+use OpenAPI\Client\Model\KeyValue;
+use OpenAPI\Client\Model\Metrics;
+use OpenAPI\Client\Model\MetricsData;
+
+const VERSION = "0.0.1";
+const METRICS_KEY = "metrics";
 
 class CFClient
 {
@@ -31,6 +40,7 @@ class CFClient
     protected string $_baseUrl;
     protected string $_eventsUrl;
     protected ClientApi $_apiInstance;
+    protected MetricsApi $_metricsApi;
     protected string $_environment;
     protected string $_cluster;
 
@@ -76,7 +86,14 @@ class CFClient
 
         $this->_configuration = new Configuration();
         $this->_configuration->setHost($this->_baseUrl);
-        $this->_apiInstance = new ClientApi(new Client(), $this->_configuration);
+        $stack = HandlerStack::create();
+        $logMiddleware = new LogMiddleware($this->_logger);
+        $stack->push($logMiddleware);
+        $client = new Client([
+            'handler' => $stack,
+        ]);
+        $this->_apiInstance = new ClientApi($client, $this->_configuration);
+        $this->_metricsApi = new MetricsApi($client, $this->_configuration);
 
         $item = $this->_cache->getItem("cf_data__{$target->getIdentifier()}");
         $cfData = $item->get();
@@ -88,10 +105,6 @@ class CFClient
         } else {
             $this->_logger->info("CF data not found in cache, authenticating...");
             $this->authenticate($item);
-        }
-
-        if (isset($this->_environment)) {
-            $this->fetchEvaluations();
         }
     }
 
@@ -137,6 +150,7 @@ class CFClient
                 $item->set($this->convertValue($evaluation));
                 $item->expiresAfter(60);
                 $this->_cache->save($item);
+                $this->pushToMetricsCache($evaluation);
             }
         } catch (ApiException $e) {
             $this->_logger->error('Exception when calling ClientApi->getEvaluations: {$e->getMessage()}');
@@ -158,11 +172,65 @@ class CFClient
             $item->expiresAfter(60);
             $this->_cache->save($item);
             $this->_logger->debug("Put {$identifier} in the cache");
+            $this->pushToMetricsCache($response);
             return $value;
         } catch (ApiException $e) {
             $this->_logger->error("Caught $e");
             return $defaultValue;
         }
+    }
+
+    public function sendMetrics() {
+        try {
+            $item = $this->_cache->getItem(METRICS_KEY);
+            $entries = $item->get();
+            if (!isset($entries)) {
+                $this->_logger->info("No metrics data");
+                return;
+            }
+            $metricsData = [];
+            /* @var $entry MetricItem */
+            foreach ($entries as $entry) {
+                $data = new MetricsData();
+                $data->setTimestamp(time());
+                $data->setCount($entry->count);
+                $data->setMetricsType("FFMETRICS");
+                $data->setAttributes([
+                    new KeyValue(["key" => "featureIdentifier", "value" => $entry->featureIdentifier]),
+                    new KeyValue(["key" => "featureName", "value" => $entry->featureIdentifier]),
+                    new KeyValue(["key" => "variationIdentifier", "value" => $entry->variationIdentifier]),
+                    new KeyValue(["key" => "target", "value" => $entry->targetIdentifier]),
+                    new KeyValue(["key" => "SDK_NAME", "value" => "PHP"]),
+                    new KeyValue(["key" => "SDK_LANGUAGE", "value" => "PHP"]),
+                    new KeyValue(["key" => "SDK_TYPE", "value" => "Server"]),
+                    new KeyValue(["key" => "SDK_VERSION", "value" => VERSION]),
+                ]);
+                $metricsData[] = $data;
+            }
+            $metrics = new Metrics();
+            $metrics->setMetricsData($metricsData);
+            print_r($metrics);
+            $this->_metricsApi->postMetrics($this->_environment, $this->_cluster, $metrics);
+            $this->_cache->deleteItem(METRICS_KEY);
+        } catch (ApiException $e) {
+            $this->_logger->error('Exception when calling MetricsApi->postMetrics: {$e->getMessage()}');
+        } catch (Exception $e) {
+            $this->_logger->error("Caught $e in MetricsApi->postMetrics");
+        }
+    }
+
+    protected function pushToMetricsCache(Evaluation $evaluation) {
+        $item = $this->_cache->getItem(METRICS_KEY);
+        $queue = $item->get();
+        if (!isset($queue)) {
+           $queue = [];
+        }
+        array_push($queue, new MetricItem(
+            $evaluation->getFlag(), $evaluation->getValue(), $evaluation->getIdentifier(), 1, time(),
+            $this->_target->getIdentifier())
+        );
+        $item->set($queue);
+        $this->_cache->save($item);
     }
 
     protected function convertValue(Evaluation $evaluation) {
@@ -186,5 +254,25 @@ class CFClient
         }
 
         return $value;
+    }
+}
+
+class MetricItem {
+    public string $featureIdentifier;
+    public string $featureValue;
+    public string $variationIdentifier;
+    public int $count;
+    public int $lastAccessed;
+    public string $targetIdentifier;
+
+    public function __construct(string $featureIdentifier, string $featureValue, string $variationIdentifier, int $count, int $lastAccessed,
+                                string $targetIdentifier)
+    {
+        $this->featureIdentifier = $featureIdentifier;
+        $this->featureValue = $featureValue;
+        $this->variationIdentifier = $variationIdentifier;
+        $this->count = $count;
+        $this->lastAccessed = $lastAccessed;
+        $this->targetIdentifier = $targetIdentifier;
     }
 }
