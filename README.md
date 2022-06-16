@@ -30,7 +30,7 @@ of feature flags. The following section provides an example of how to install th
 
 This quickstart assumes you have followed the instructions to [setup a Feature Flag project and have created a flag called `harnessappdemodarkmode` and created a server API Key](https://ngdocs.harness.io/article/1j7pdkqh7j-create-a-feature-flag#step_1_create_a_project).
 
-### Install the FF SDK Dependency
+### Install the SDK Dependency
 
 The first step is to install the FF SDK as a dependency in your application using your application's dependency manager. 
 
@@ -39,7 +39,14 @@ The first step is to install the FF SDK as a dependency in your application usin
 After installing the SDK, enter the SDK keys that you created for your environment. The SDK keys authorize your application to connect to the FF client. 
 
 ```php
-<?php echo "simple example"; ?>
+<?php
+
+use Harness\CFClient;
+use OpenAPI\Client\Model\Target;
+
+$cfClient = new CFClient(getenv("SDK_KEY"), new Target(["name" => "Harness", "identifier" => "harness"]));
+
+echo "Evaluation value for flag 'flag1' with target 'enver': " . $cfClient->evaluate("flag1", false);
 ```
 
 

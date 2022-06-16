@@ -39,7 +39,7 @@ services:
       - app-network
 
   ff-proxy:
-    image: "harness/ff-proxy:0.9.3"
+    image: "harness/ff-proxy:0.9.6"
     container_name: ff-proxy
     volumes:
       - ./config:/config
