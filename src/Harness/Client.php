@@ -269,4 +269,10 @@ class Client
 
         return $value;
     }
+
+    public function close() {
+        if ($this->_metricsEnabled) {
+            $this->sendMetrics();
+        }
+    }
 }
