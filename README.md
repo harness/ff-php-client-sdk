@@ -19,11 +19,12 @@ Harness Feature Flags (FF) is a feature management solution that enables users t
 ![FeatureFlags](https://github.com/harness/ff-php-server-sdk/raw/main/docs/images/ff-gui.png)
 
 ## Requirements
-
-
+To use this SDK, make sure you’ve:
+- Installed [PHP](https://www.php.net/) 7.4 or a newer version
+- [Composer](https://getcomposer.org/) dependency Manager for PHP
 ### General Dependencies
-
-
+- [Relay Proxy](https://github.com/harness/ff-proxy)
+- [Redis](https://redis.io/)
 ## Quickstart
 The Feature Flag SDK provides a client that connects to the feature flag service, and fetches the value
 of feature flags. The following section provides an example of how to install the SDK and initialize it from an application.
@@ -32,8 +33,11 @@ This quickstart assumes you have followed the instructions to [setup a Feature F
 
 ### Install the SDK Dependency
 
-The first step is to install the FF SDK as a dependency in your application using your application's dependency manager. 
+The first step is to install the SDK as a dependency in your application using your application's dependency manager.
 
+```
+composer require harness/ff-server-sdk
+```
 ### A Simple Example
 
 After installing the SDK, enter the SDK keys that you created for your environment. The SDK keys authorize your application to connect to the FF client. 
@@ -41,14 +45,30 @@ After installing the SDK, enter the SDK keys that you created for your environme
 ```php
 <?php
 
+require_once realpath("vendor/autoload.php");
+
 use Harness\CFClient;
 use OpenAPI\Client\Model\Target;
 
-$cfClient = new CFClient(getenv("SDK_KEY"), new Target(["name" => "Harness", "identifier" => "harness"]));
+$FLAG_KEY = "harnessappdemodarkmode";
+$SDK_KEY = getenv("SDK_KEY") ?: "";  // you can put your key in env variable or you can provide in the code
 
-echo "Evaluation value for flag 'flag1' with target 'enver': " . $cfClient->evaluate("flag1", false);
+$client = new CFClient($SDK_KEY, new Target(["name" => "Harness", "identifier" => "harness"]), [
+	"base_url": "http://proxy-url",
+	"events_url": "http://proxy-url",
+]);
+
+echo "Evaluation value for flag $FLAG_KEY with target 'enver': " . $client->evaluate($FLAG_KEY, false);
+$client->close();
 ```
 
+## Running the example
+
+To run the example, open the browser and type:
+
+```
+http://localhost/yourscriptfile.php
+```
 
 ### Additional Reading
 
