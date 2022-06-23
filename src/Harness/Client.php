@@ -10,7 +10,7 @@ use OpenAPI\Client\Configuration;
 use OpenAPI\Client\Model\AuthenticationRequest;
 use OpenAPI\Client\ApiException;
 use OpenAPI\Client\Model\Target;
-use GuzzleHttp\Client;
+use GuzzleHttp\Client as HttpClient;
 use Psr\Log\LogLevel;
 use GuzzleHttp\HandlerStack;
 use GuzzleLogMiddleware\LogMiddleware;
@@ -24,17 +24,16 @@ use OpenAPI\Client\Model\KeyValue;
 use OpenAPI\Client\Model\Metrics;
 use OpenAPI\Client\Model\MetricsData;
 
-const VERSION = "0.0.1";
 const METRICS_KEY = "metrics";
 
-class CFClient
+class Client
 {
     /** @var string */
     const DEFAULT_BASE_URL = 'http://ff-proxy:7000';
     /** @var string */
     const DEFAULT_EVENTS_URL = 'http://ff-proxy:7000';
     /** @var string */
-    const VERSION = '1.0.0';
+    const VERSION = '0.0.1';
 
     protected string $_sdkKey;
     protected string $_baseUrl;
@@ -42,7 +41,7 @@ class CFClient
     protected ClientApi $_apiInstance;
     protected MetricsApi $_metricsApi;
     protected string $_environment;
-    protected int $_cluster;
+    protected int $_cluster = 1;
 
     protected Configuration $_baseConf;
     protected Configuration $_metricsConf;
@@ -95,7 +94,7 @@ class CFClient
         $stack = HandlerStack::create();
         $logMiddleware = new LogMiddleware($this->_logger);
         $stack->push($logMiddleware);
-        $client = new Client([
+        $client = new HttpClient([
             'handler' => $stack,
         ]);
         $this->_apiInstance = new ClientApi($client, $this->_baseConf);
@@ -103,16 +102,16 @@ class CFClient
         $this->_metricsConf->setHost($this->_eventsUrl);
         $this->_metricsApi = new MetricsApi($client, $this->_metricsConf);
 
-        $item = $this->_cache->getItem("cf_data__{$target->getIdentifier()}");
-        $cfData = $item->get();
-        if (isset($cfData)) {
+        $item = $this->_cache->getItem("auth__{$target->getIdentifier()}");
+        $data = $item->get();
+        if (isset($data)) {
             $this->_logger->info("CF data loaded from the cache");
-            $this->_environment = $cfData["environment"];
-            $this->_cluster = $cfData["clusterIdentifier"];
-            $this->_baseConf->setAccessToken($cfData["JWT"]);
-            $this->_metricsConf->setAccessToken($cfData["JWT"]);
+            $this->_environment = $data["environment"];
+            $this->_cluster = $data["clusterIdentifier"];
+            $this->_baseConf->setAccessToken($data["JWT"]);
+            $this->_metricsConf->setAccessToken($data["JWT"]);
         } else {
-            $this->_logger->info("CF data not found in cache, authenticating...");
+            $this->_logger->info("Authentication token not found in cache, authenticating...");
             $this->authenticate($item);
         }
     }
@@ -131,7 +130,6 @@ class CFClient
             $decoded = base64_decode($parts[1]);
             $payload = json_decode($decoded, true);
             $this->_environment = $payload['environment'];
-            $this->_cluster = 1;
             if (array_key_exists('clusterIdentifier', $payload)) {
                 $this->_cluster = $payload["clusterIdentifier"];
             }
@@ -217,7 +215,7 @@ class CFClient
                     new KeyValue(["key" => "SDK_NAME", "value" => "PHP"]),
                     new KeyValue(["key" => "SDK_LANGUAGE", "value" => "PHP"]),
                     new KeyValue(["key" => "SDK_TYPE", "value" => "Server"]),
-                    new KeyValue(["key" => "SDK_VERSION", "value" => VERSION]),
+                    new KeyValue(["key" => "SDK_VERSION", "value" => Client::VERSION]),
                 ]);
                 $metricsData[] = $data;
             }
@@ -226,9 +224,9 @@ class CFClient
             $this->_metricsApi->postMetrics($this->_environment, $this->_cluster, $metrics);
             $this->_cache->deleteItem(METRICS_KEY);
         } catch (ApiException $e) {
-                $this->_logger->error("Exception when calling MetricsApi->postMetrics {$e->getMessage()}");
+                $this->_logger->error("Exception when calling MetricsApi->postMetrics {$e->getMessage()}", $e);
         } catch (Exception $e) {
-            $this->_logger->error("Caught $e in MetricsApi->postMetrics");
+            $this->_logger->error("Caught $e in MetricsApi->postMetrics", $e);
         }
     }
 
@@ -270,31 +268,5 @@ class CFClient
         }
 
         return $value;
-    }
-
-    public function close() {
-        if ($this->_metricsEnabled) {
-            $this->sendMetrics();
-        }
-    }
-}
-
-class MetricItem {
-    public string $featureIdentifier;
-    public string $featureValue;
-    public string $variationIdentifier;
-    public int $count;
-    public int $lastAccessed;
-    public string $targetIdentifier;
-
-    public function __construct(string $featureIdentifier, string $featureValue, string $variationIdentifier, int $count, int $lastAccessed,
-                                string $targetIdentifier)
-    {
-        $this->featureIdentifier = $featureIdentifier;
-        $this->featureValue = $featureValue;
-        $this->variationIdentifier = $variationIdentifier;
-        $this->count = $count;
-        $this->lastAccessed = $lastAccessed;
-        $this->targetIdentifier = $targetIdentifier;
     }
 }
