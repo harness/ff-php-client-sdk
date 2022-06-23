@@ -241,9 +241,9 @@ class CFClient
         if (!isset($queue)) {
            $queue = [];
         }
-        array_push($queue, new MetricItem(
+        $queue[] = new MetricItem(
             $evaluation->getFlag(), $evaluation->getValue(), $evaluation->getIdentifier(), 1, time(),
-            $this->_target->getIdentifier())
+            $this->_target->getIdentifier()
         );
         $item->set($queue);
         $this->_cache->save($item);
@@ -287,9 +287,14 @@ class MetricItem {
     public int $lastAccessed;
     public string $targetIdentifier;
 
-    public function __construct(string $featureIdentifier, string $featureValue, string $variationIdentifier, int $count, int $lastAccessed,
-                                string $targetIdentifier)
-    {
+    public function __construct(
+        string $featureIdentifier,
+        string $featureValue,
+        string $variationIdentifier,
+        int $count,
+        int $lastAccessed,
+        string $targetIdentifier
+    ) {
         $this->featureIdentifier = $featureIdentifier;
         $this->featureValue = $featureValue;
         $this->variationIdentifier = $variationIdentifier;
