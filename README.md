@@ -20,9 +20,9 @@ Harness Feature Flags (FF) is a feature management solution that enables users t
 
 ## Requirements
 To use this SDK, make sure you’ve:
-- Installed [PHP](https://www.php.net/) 7.4 or a newer version
-- [Composer](https://getcomposer.org/) dependency Manager for PHP
-### Optional Dependencies
+- installed [PHP](https://www.php.net/) 7.4 or a newer version
+- installed [Composer](https://getcomposer.org/)
+### General Dependencies
 - [Relay Proxy](https://github.com/harness/ff-proxy)
 - [Redis](https://redis.io/)
 ## Quickstart
@@ -33,9 +33,9 @@ This quickstart assumes you have followed the instructions to [setup a Feature F
 
 ### Install the SDK Dependency
 
-The first step is to install the SDK as a dependency in your application using your application's dependency manager.
+The first step is to install the SDK as a dependency in your application using Composer.
 
-```
+```shell
 composer require harness/ff-server-sdk
 ```
 ### A Simple Example
@@ -54,8 +54,8 @@ $FLAG_KEY = "harnessappdemodarkmode";
 $SDK_KEY = getenv("SDK_KEY") ?: "";  // you can put your key in env variable or you can provide in the code
 
 $client = new CFClient($SDK_KEY, new Target(["name" => "Harness", "identifier" => "harness"]), [
-	"base_url": "http://proxy-url",
-	"events_url": "http://proxy-url",
+    "base_url": "http://proxy-url",
+    "events_url": "http://proxy-url",
 ]);
 
 echo "Evaluation value for flag $FLAG_KEY with target 'harness': " . $client->evaluate($FLAG_KEY, false);

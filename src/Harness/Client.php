@@ -239,9 +239,9 @@ class Client
         if (!isset($queue)) {
            $queue = [];
         }
-        array_push($queue, new MetricItem(
+        $queue[] = new MetricItem(
             $evaluation->getFlag(), $evaluation->getValue(), $evaluation->getIdentifier(), 1, time(),
-            $this->_target->getIdentifier())
+            $this->_target->getIdentifier()
         );
         $item->set($queue);
         $this->_cache->save($item);

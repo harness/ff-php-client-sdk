@@ -9,4 +9,4 @@ $SDK_KEY = getenv("SDK_KEY") ?: "";  // you can put your key in env variable or 
 
 $cfClient = new Client($SDK_KEY, new Target(["name" => "harness", "identifier" => "harness"]));
 
-echo "Evaluation value for flag 'flag1' with target 'enver': " . $cfClient->evaluate("flag1", false);
+echo "Evaluation value for flag 'flag1' with target 'harness': " . $cfClient->evaluate("flag1", false);
