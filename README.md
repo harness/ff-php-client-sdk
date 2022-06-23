@@ -47,13 +47,13 @@ After installing the SDK, enter the SDK keys that you created for your environme
 
 require_once realpath("vendor/autoload.php");
 
-use Harness\CFClient;
+use Harness\Client;
 use OpenAPI\Client\Model\Target;
 
 $FLAG_KEY = "harnessappdemodarkmode";
 $SDK_KEY = getenv("SDK_KEY") ?: "";  // you can put your key in env variable or you can provide in the code
 
-$client = new CFClient($SDK_KEY, new Target(["name" => "Harness", "identifier" => "harness"]), [
+$client = new Client($SDK_KEY, new Target(["name" => "Harness", "identifier" => "harness"]), [
     "base_url": "http://proxy-url",
     "events_url": "http://proxy-url",
 ]);

@@ -69,7 +69,7 @@ class Client
         }
 
         if (!isset($options['logger'])) {
-            $this->_logger = new Logger('CfClient');
+            $this->_logger = new Logger('FFClient');
             $this->_logger->pushHandler(new StreamHandler('php://stderr', LogLevel::DEBUG));
         } else {
             $this->_logger = $options['logger'];
