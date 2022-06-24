@@ -23,8 +23,12 @@ use OpenAPI\Client\Model\Evaluation;
 use OpenAPI\Client\Model\KeyValue;
 use OpenAPI\Client\Model\Metrics;
 use OpenAPI\Client\Model\MetricsData;
+use Psr\Cache\CacheItemPoolInterface;
+use Psr\Log\LoggerInterface;
 
 const METRICS_KEY = "metrics";
+const EVALUATIONS = "evaluations";
+const SEPARATOR = "__";
 
 class Client
 {
@@ -46,24 +50,27 @@ class Client
     protected Configuration $_baseConf;
     protected Configuration $_metricsConf;
 
-    protected $_logger;
-    protected $_cache;
+    protected LoggerInterface $_logger;
+    protected CacheItemPoolInterface $_cache;
     protected bool $_metricsEnabled = true;
 
     protected Target $_target;
+
+    protected bool $_debug = false;
+    protected int $_expireAfter = 60;
 
     public function __construct(string $sdkKey, Target $target, array $options = [])
     {
         $this->_sdkKey = $sdkKey;
         $this->_target = $target;
         if (!isset($options['base_url'])) {
-            $this->_baseUrl = $_ENV["PROXY_BASE_URL"] ?: self::DEFAULT_BASE_URL;
+            $this->_baseUrl = getenv("PROXY_BASE_URL") ?: self::DEFAULT_BASE_URL;
         } else {
             $this->_baseUrl = rtrim($options['base_url'], '/');
         }
 
         if (!isset($options['events_url'])) {
-            $this->_eventsUrl = $_ENV["PROXY_EVENTS_URL"] ?: self::DEFAULT_EVENTS_URL;
+            $this->_eventsUrl = getenv("PROXY_EVENTS_URL") ?: self::DEFAULT_EVENTS_URL;
         } else {
             $this->_eventsUrl = rtrim($options['events_url'], '/');
         }
@@ -88,15 +95,18 @@ class Client
             $this->_metricsEnabled = $options['metricsEnabled'];
         }
 
+        if (isset($options['debug'])) {
+            $this->_debug = $options['debug'] === "true";
+        }
+
+        if (isset($options['expireAfter'])) {
+            $this->_expireAfter = $options['expireAfter'];
+        }
+
 
         $this->_baseConf = new Configuration();
         $this->_baseConf->setHost($this->_baseUrl);
-        $stack = HandlerStack::create();
-        $logMiddleware = new LogMiddleware($this->_logger);
-        $stack->push($logMiddleware);
-        $client = new HttpClient([
-            'handler' => $stack,
-        ]);
+        $client = $this->makeClient();
         $this->_apiInstance = new ClientApi($client, $this->_baseConf);
         $this->_metricsConf = new Configuration();
         $this->_metricsConf->setHost($this->_eventsUrl);
@@ -114,6 +124,17 @@ class Client
             $this->_logger->info("Authentication token not found in cache, authenticating...");
             $this->authenticate($item);
         }
+    }
+
+    protected function makeClient(): HttpClient {
+        $stack = HandlerStack::create();
+        if ($this->_debug) {
+            $logMiddleware = new LogMiddleware($this->_logger);
+            $stack->push($logMiddleware);
+        }
+        return new HttpClient([
+            'handler' => $stack,
+        ]);
     }
 
     protected function authenticate($item)
@@ -149,19 +170,28 @@ class Client
         }
     }
 
+    public function getCacheKeyName(string $feature, string $target): string {
+        return EVALUATIONS . SEPARATOR . $feature . SEPARATOR . $target;
+    }
+
     public function fetchEvaluations()
     {
         try {
             $result = $this->_apiInstance->getEvaluations($this->_environment, $this->_target->getIdentifier(), $this->_cluster);
             foreach ($result as $evaluation) {
-                $item = $this->_cache->getItem("evaluations__{$evaluation->getIdentifier()}__{$this->_target->getIdentifier()}");
+                $feature = $evaluation->getFlag();
+                $target = $this->_target->getIdentifier();
+                $item = $this->_cache->getItem($this->getCacheKeyName($feature, $target));
                 $item->set($this->convertValue($evaluation));
-                $item->expiresAfter(60);
+                $item->expiresAfter($this->_expireAfter);
                 $this->_cache->save($item);
-                $this->pushToMetricsCache($evaluation);
+                if ($this->_metricsEnabled) {
+                    $this->pushToMetricsCache($evaluation);
+                }
             }
+            return $result;
         } catch (ApiException $e) {
-            $this->_logger->error('Exception when calling ClientApi->getEvaluations: {$e->getMessage()}');
+            $this->_logger->error("Exception when calling ClientApi->getEvaluations: {$e->getMessage()}");
         } catch (Exception $e) {
             $this->_logger->error("Caught $e");
         }
@@ -171,19 +201,24 @@ class Client
         if (!isset($this->_environment)) {
             return $defaultValue;
         }
-        $item = $this->_cache->getItem("evaluations__{$identifier}__{$this->_target->getIdentifier()}");
-        if ($value = $item->get()) {
+        $target = $this->_target->getIdentifier();
+        $item = $this->_cache->getItem($this->getCacheKeyName($identifier, $target));
+        $value = $item->get();
+        if (isset($value)) {
             $this->_logger->debug("Loading {$identifier} from cache with value {$value}");
             return $value;
         }
         try {
             $response = $this->_apiInstance->getEvaluationByIdentifier($this->_environment, $identifier, $this->_target->getIdentifier(), $this->_cluster);
             $value = $this->convertValue($response);
+            $this->_logger->debug("Loading {$identifier} from service with value {$value}");
             $item->set($value);
-            $item->expiresAfter(60);
+            $item->expiresAfter($this->_expireAfter);
             $this->_cache->save($item);
             $this->_logger->debug("Put {$identifier} in the cache");
-            $this->pushToMetricsCache($response);
+            if ($this->_metricsEnabled) {
+                $this->pushToMetricsCache($response);
+            }
             return $value;
         } catch (ApiException $e) {
             $this->_logger->error("Caught $e");
@@ -192,6 +227,9 @@ class Client
     }
 
     public function sendMetrics() {
+        if (!$this->_metricsEnabled) {
+            return;
+        }
         try {
             $item = $this->_cache->getItem(METRICS_KEY);
             $entries = $item->get();
@@ -224,9 +262,9 @@ class Client
             $this->_metricsApi->postMetrics($this->_environment, $this->_cluster, $metrics);
             $this->_cache->deleteItem(METRICS_KEY);
         } catch (ApiException $e) {
-                $this->_logger->error("Exception when calling MetricsApi->postMetrics {$e->getMessage()}", $e);
+                $this->_logger->error("Exception when calling MetricsApi->postMetrics {$e->getMessage()}", [$e]);
         } catch (Exception $e) {
-            $this->_logger->error("Caught $e in MetricsApi->postMetrics", $e);
+            $this->_logger->error("Caught $e in MetricsApi->postMetrics", [$e]);
         }
     }
 
@@ -252,12 +290,11 @@ class Client
         try {
             switch ($evaluation->getKind()) {
                 case "int":
-                    $value = (int)$value;
                 case "number":
                     $value = (float)$value;
                     break;
                 case "boolean":
-                    $value === "true";
+                    $value = $value === "true";
                     break;
                 case "json":
                     $value = json_decode($value, true);

@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
+    bootstrap="vendor/autoload.php"
+    colors="true"
+    verbose="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    processIsolation="false"
+    stopOnFailure="false">
+  
+  <logging>
+    <junit outputFile="build/phpunit/junit.xml"/>
+  </logging>
+
+  <coverage>
+    <include>
+      <directory suffix=".php">src</directory>
+    </include>
+    <report>
+      <html outputDirectory="build/phpunit/html-coverage"/>
+      <xml outputDirectory="build/phpunit/xml-coverage"/>
+    </report>
+  </coverage>
+
+  <testsuites>
+      <testsuite name="Unit">
+          <directory suffix="Test.php">./tests/Unit</directory>
+      </testsuite>
+      <testsuite name="Integration">
+          <directory suffix="Test.php">./tests/Integration</directory>
+      </testsuite>
+  </testsuites>
+
+  <php>
+      <env name="SDK_KEY" value="testing"/>
+      <env name="PROXY_BASE_URL" value="http://localhost:7001"/>
+      <env name="PROXY_EVENTS_URL" value="http://localhost:7001"/>
+  </php>
+
+</phpunit>

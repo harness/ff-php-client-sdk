@@ -15,3 +15,9 @@ generate:
     -i /local/api.yaml \
     -g php \
     -o /local/api
+
+test:
+	./vendor/bin/phpunit
+
+int-test:
+	./vendor/bin/phpunit ./tests/Integration/ClientTest.php
