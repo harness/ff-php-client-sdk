@@ -105,7 +105,7 @@ Once these are configured, start the docker containers with:
 make start
 ```
 
-Once the docker containers are running, open the URL a browser window to view the Feature Flag value.
+Once the docker containers are running, open the URL in a browser window to view the Feature Flag value.
 
 ```
 http://localhost/online_example.php
