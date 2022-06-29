@@ -6,9 +6,9 @@ use Harness\Client;
 use OpenAPI\Client\Model\Target;
 
 $SDK_KEY = getenv("SDK_KEY") ?: "";  // you can put your key in env variable or you can provide in the code
-$flag_name = "harnessappdemodarkmode";
+$FLAG_NAME = "harnessappdemodarkmode";
 
 $client = new Client($SDK_KEY, new Target(["name" => "harness", "identifier" => "harness"]));
-$result = $client->evaluate($flag_name, false);
+$result = $client->evaluate($FLAG_NAME, false);
 
-echo "Evaluation value for flag '{$flag_name}' with target 'harness': " .json_encode($result);
+echo "Evaluation value for flag '".$FLAG_NAME."' with target 'harness': ".json_encode($result);

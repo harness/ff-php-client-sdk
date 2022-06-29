@@ -46,7 +46,7 @@ The following is a complete code example that you can use to test the `harnessap
 - Report the value of the Flag on the webpage. Every time the `harnessappdemodarkmode` Flag is toggled on or off on the Harness Platform, the updated value will be updated when the cache refreshes, then refresh the webpage to see the new value. 
 - Close the SDK.
 
-The example below can also be found in [online_example.php](online_example.php).
+The example below can also be found in [online_example.php](https://github.com/harness/ff-php-server-sdk/raw/main/online_example.php).
 ```php
 <?php
 
@@ -56,12 +56,12 @@ use Harness\Client;
 use OpenAPI\Client\Model\Target;
 
 $SDK_KEY = getenv("SDK_KEY") ?: "";  // you can put your key in env variable or you can provide in the code
-$flag_name = "harnessappdemodarkmode";
+$FLAG_NAME = "harnessappdemodarkmode";
 
 $client = new Client($SDK_KEY, new Target(["name" => "harness", "identifier" => "harness"]));
-$result = $client->evaluate($flag_name, false);
+$result = $client->evaluate($FLAG_NAME, false);
 
-echo "Evaluation value for flag '{$flag_name}' with target 'harness': " .json_encode($result);
+echo "Evaluation value for flag '".$FLAG_NAME."' with target 'harness': ".json_encode($result);
 ```
 
 ## Running the example with docker
@@ -101,7 +101,7 @@ For More information on how to get the values for these fields, refer to:
 [Feature Flags SDK Keys](https://ngdocs.harness.io/article/rvqprvbq8f-client-side-and-server-side-sdks)
 
 Once these are configured, start the docker containers with:
-```
+```shell
 make start
 ```
 

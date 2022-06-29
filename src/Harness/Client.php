@@ -205,13 +205,13 @@ class Client
         $item = $this->_cache->getItem($this->getCacheKeyName($identifier, $target));
         $value = $item->get();
         if (isset($value)) {
-            $this->_logger->debug("Loading {$identifier} from cache with value ".json_encode($value)." of type ".gettype($value));
+            $this->_logger->debug("Loading '".$identifier."' from cache with value '".json_encode($value)."' of type ".gettype($value));
             return $value;
         }
         try {
             $response = $this->_apiInstance->getEvaluationByIdentifier($this->_environment, $identifier, $this->_target->getIdentifier(), $this->_cluster);
             $value = $this->convertValue($response);
-            $this->_logger->debug("Loading {$identifier} from service with value ".json_encode($value)." of type ".gettype($value));
+            $this->_logger->debug("Loading '".$identifier."' from service with value '".json_encode($value)."' of type ".gettype($value));
             $item->set($value);
             $item->expiresAfter($this->_expireAfter);
             $this->_cache->save($item);
