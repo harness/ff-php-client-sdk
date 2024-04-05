@@ -179,7 +179,11 @@ class Client
             $this->_baseConf->setAccessToken($jwtToken);
             $this->_metricsConf->setAccessToken($jwtToken);
             $this->_logger->info("successfully authenticated");
-            $item->set(array("JWT" => $jwtToken, "environment" => $this->_environment, "clusterIdentifier" => $this->_cluster));
+            $item->set(array("JWT" => $jwtToken,
+                "environment" => $this->_environment,
+                "clusterIdentifier" => $this->_cluster,
+                "accountID" => $this->_accountID,
+                "environmentIdentifier" => $this->_environmentIdentifier));
             $this->_cache->save($item);
         } catch (ApiException $e) {
             $this->_logger->error("Error while authenticating {$e->getMessage()}");
