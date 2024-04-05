@@ -37,7 +37,7 @@ class Client
     /** @var string */
     const DEFAULT_EVENTS_URL = 'http://ff-proxy:7000';
     /** @var string */
-    const VERSION = '0.0.1';
+    const VERSION = '0.2.0';
 
     protected string $_sdkKey;
     protected string $_baseUrl;
@@ -84,6 +84,8 @@ class Client
         } else {
             $this->_logger = $options['logger'];
         }
+
+        $this->_logger->info("SDK version " . Client::VERSION);
 
         if (!isset($options['cache'])) {
             $filesystemAdapter = new Local(sys_get_temp_dir());
