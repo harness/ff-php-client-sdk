@@ -88,8 +88,11 @@ class Client
         $this->_logger->info("SDK version " . Client::VERSION);
 
         if (!isset($options['cache'])) {
-            $filesystemAdapter = new Local(sys_get_temp_dir());
+            $tempdir           = sys_get_temp_dir();
+            $filesystemAdapter = new Local($tempdir);
             $filesystem        = new Filesystem($filesystemAdapter);
+
+            $this->_logger->info("Cache location: " . $tempdir);
 
             $this->_cache = new FilesystemCachePool($filesystem);
         } else {
