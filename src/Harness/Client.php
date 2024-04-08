@@ -33,9 +33,9 @@ const SEPARATOR = "__";
 class Client
 {
     /** @var string */
-    const DEFAULT_BASE_URL = 'http://ff-proxy:7000';
+    const DEFAULT_BASE_URL = 'https://config.ff.harness.io/api/1.0';
     /** @var string */
-    const DEFAULT_EVENTS_URL = 'http://ff-proxy:7000';
+    const DEFAULT_EVENTS_URL = 'https://events.ff.harness.io/api/1.0';
     /** @var string */
     const VERSION = '0.2.0';
 
